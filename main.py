@@ -1,40 +1,13 @@
 import cv2
 import numpy as np
+from frame_preproc import preprocess_frame
+from detect_module import find_largest_contour, draw_contour
 
-THRESHOLD = 200
-MIN_LINE_AREA = 500
-MIN_LINE_WIDTH = 100
-MAX_ANGLE_DEV = 5
-ALERT_THRESHOLD = 50
 CHANGE_THRESHOLD = 50
 
-def preprocess_frame(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    _, binary = cv2.threshold(gray, THRESHOLD, 255, cv2.THRESH_BINARY)
-    kernel = np.ones((7, 7), np.uint8)
-    return cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
-
-
-def find_largest_contour(binary_img):
-    contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    largest_contour = None
-    max_area = 0
-
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area > max_area:
-            max_area = area
-            largest_contour = cnt
-
-    return largest_contour, max_area
-
-def draw_contour(frame, contour, color):
-    if contour is not None:
-        cv2.drawContours(frame, [contour], 0, color=color, thickness=2)
-    return frame
-
 def main():
-    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture(0)   #для мака
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)   #для винды
     if not cap.isOpened():
         print("Ошибка: не удалось открыть камеру")
         return
@@ -49,8 +22,6 @@ def main():
             print("Ошибка: не удалось получить кадр")
             break
 
-        prev_area = largest_area
-
         binary = preprocess_frame(frame)
         largest_contour, largest_area = find_largest_contour(binary)
 
@@ -62,8 +33,12 @@ def main():
                 frame = draw_contour(frame, largest_contour, (0, 255, 0))  # Зеленый цвет для стабильных контуров
         else:
             frame = draw_contour(frame, largest_contour, (0, 255, 0))  # Зеленый цвет для стабильных контуров
+        
+        prev_area = largest_area
+        prev_contour = largest_contour
  
         cv2.imshow('Line Tracking', frame)
+        cv2.imshow('Binary', binary)
         
         if cv2.waitKey(1) == 27:
             break
